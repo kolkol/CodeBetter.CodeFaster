@@ -8,7 +8,11 @@ using static Models.Constants;
 
 namespace Services
 {
-    public class ClassInstance
+    /// <summary>
+    /// Issue fixed: Constructurs contain alot of redundant code, we can fix this without breaking the calling code, by letting the default constructor rely on the big one.
+    /// 
+    /// </summary>
+    public class LectureInstanceFix1
     {
         private List<Student> students;
         private List<Lecturer> lecturers;
@@ -22,25 +26,11 @@ namespace Services
         private AcademicLevel academicLevelRequiredToAttend;
         private AcademicLevel academicLevelRequiredToTeach;
 
+        public LectureInstanceFix1(IObserverConsole observer) 
+            : this(observer, 10, 2, 12, DateTime.Now.AddDays(10), AcademicLevel.None, AcademicLevel.Bachelor)
+        { }
 
-
-        public ClassInstance(IObserverConsole observer)
-        {
-            this.observer = observer;
-            this.maxStudents = 10;
-            this.maxStudentsWaitList = 5;
-            this.maxLecturers = 2;
-            this.maxSeats = 12;
-            lastDayToRegister = DateTime.Now.AddDays(10);
-            academicLevelRequiredToAttend = AcademicLevel.None;
-            academicLevelRequiredToTeach = AcademicLevel.Bachelor;
-
-            students = new List<Student>();
-            studentsWaitList = new List<Student>();
-            lecturers = new List<Lecturer>();
-        }
-
-        public ClassInstance(IObserverConsole observer, int maxStudents, int maxLecturers, int maxSeats, DateTime lastTimetoRegister, AcademicLevel requiredToAttend, AcademicLevel requiredToTeach)
+        public LectureInstanceFix1(IObserverConsole observer, int maxStudents, int maxLecturers, int maxSeats, DateTime lastTimetoRegister, AcademicLevel requiredToAttend, AcademicLevel requiredToTeach)
         {
             this.observer = observer;
             this.academicLevelRequiredToAttend = requiredToAttend;
@@ -62,47 +52,53 @@ namespace Services
         /// <param name="p"></param>
         /// <param name="isAdmin"></param>
         /// <returns></returns>
-        public bool AddAttendee(Person p, bool isAdmin)
+        public bool AddAttendees(List<Person> p, bool isAdmin)
         {
-            if(p is Student)
+            for (int i = 0; i < p.Count; i++)
             {
-                if(DateTime.Now < lastDayToRegister)
+                if (p[i] is Student)
                 {
-                    if(students.Count < maxStudents)
+                    if (DateTime.Now < lastDayToRegister || isAdmin)
                     {
-                        if ((int)p.Level >= (int)this.academicLevelRequiredToAttend)
+                        if (students.Count < maxStudents)
                         {
-                            students.Add(p as Student);
+                            if ((int)p[i].Level >= (int)this.academicLevelRequiredToAttend)
+                            {
+                                students.Add(p[i] as Student);
+                            }
                         }
-                    }
-                    else if(studentsWaitList.Count < maxStudentsWaitList)
-                    {
-                        if((int)p.Level >= (int)this.academicLevelRequiredToAttend)
+                        else if (studentsWaitList.Count < maxStudentsWaitList)
                         {
-                            students.Add(p as Student);
+                            if ((int)p[i].Level >= (int)this.academicLevelRequiredToAttend)
+                            {
+                                studentsWaitList.Add(p[i] as Student);
+                            }
                         }
-                        
+                        else
+                        {
+                            return false;
+                        }
                     }
                     else
                     {
                         return false;
                     }
+
                 }
-                else
+                else if (p is Lecturer)
                 {
-                    return false;
-                }
-                
-            }
-            else if(p is Lecturer)
-            {
-                if (DateTime.Now < lastDayToRegister)
-                {
-                    if (lecturers.Count < maxLecturers)
+                    if (DateTime.Now < lastDayToRegister || isAdmin)
                     {
-                        if ((int)p.Level >= (int)this.academicLevelRequiredToTeach)
+                        if (lecturers.Count < maxLecturers)
                         {
-                            lecturers.Add(p as Lecturer);
+                            if ((int)p[i].Level >= (int)this.academicLevelRequiredToTeach)
+                            {
+                                lecturers.Add(p[i] as Lecturer);
+                            }
+                            else
+                            {
+                                return false;
+                            }
                         }
                         else
                         {
@@ -116,12 +112,9 @@ namespace Services
                 }
                 else
                 {
-                   return false;
+                    return false;
                 }
-            }
-            else
-            {
-                return false;
+
             }
 
             return true;

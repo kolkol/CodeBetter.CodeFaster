@@ -14,6 +14,8 @@ namespace Models
         public string? FirstName { get; set; }  
         public string? LastName { get; set; }
 
+        public bool IsValid { get; set; }
+
         public int Age { get; set; } = 0;
         public int Birthday { get; set; } = 0;
 

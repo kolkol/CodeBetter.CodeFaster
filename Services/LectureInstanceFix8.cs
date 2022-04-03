@@ -1,0 +1,150 @@
+﻿using Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using static Models.Constants;
+
+namespace Services
+{
+    /// <summary>
+    /// Reusable and not redentant - fixed: Constructurs contain alot of redundant code, we can fix this without breaking the calling code, by letting the default constructor rely on the big one.
+    /// Complexity fixed: Deep complexity with two bumps. Break into separate handlers. (Function scope)
+    /// Reusability fixed: Last day to register common for all, not related to input param on person (Which is a bit strange, but this is supposed to be a bad example), move to top of call stack.
+    /// Complexity fixed: Add lecturer is just a validation, create function out of validation logic.
+    /// Complexity fixed: Add student validation logic as method.
+    /// Complexity fixed: AddAttendee;
+    /// Intended Usage: Foreach loop.
+    /// Intended Usage: Use errors for error handling, true false on add is a mess!
+    /// </summary>
+    public class LectureInstanceFix8
+    {
+        private List<Student> students;
+        private List<Lecturer> lecturers;
+        private List<Student> studentsWaitList;
+        private int maxStudents;
+        private int maxStudentsWaitList;
+        private int maxLecturers;
+        private int maxSeats;
+        private DateTime lastDayToRegister;
+        private IObserverConsole observer;
+        private AcademicLevel academicLevelRequiredToAttend;
+        private AcademicLevel academicLevelRequiredToTeach;
+
+        public LectureInstanceFix8(IObserverConsole observer)
+            : this(observer, 10, 2, 12, DateTime.Now.AddDays(10), AcademicLevel.None, AcademicLevel.Bachelor)
+        { }
+
+        public LectureInstanceFix8(IObserverConsole observer, int maxStudents, int maxLecturers, int maxSeats, DateTime lastTimetoRegister, AcademicLevel requiredToAttend, AcademicLevel requiredToTeach)
+        {
+            this.observer = observer;
+            this.academicLevelRequiredToAttend = requiredToAttend;
+            this.academicLevelRequiredToTeach = requiredToTeach;
+
+            this.maxStudents = maxStudents;
+            this.maxLecturers = maxLecturers;
+            this.maxSeats = maxSeats;
+            this.lastDayToRegister = lastTimetoRegister;
+
+            students = new List<Student>();
+            studentsWaitList = new List<Student>();
+            lecturers = new List<Lecturer>();
+        }
+
+        /// <summary>
+        /// This is the original complex, unclear and quite bad code.
+        /// </summary>
+        /// <param name="p"></param>
+        /// <param name="isAdmin"></param>
+        /// <returns></returns>
+        public bool AddAttendees(List<Person> p, bool isAdmin)
+        {
+            if (IsClosedForRegistration(isAdmin))
+                return false;
+
+            try
+            {
+                foreach (Person person in p)
+                {
+                    AddAttendee(person, isAdmin);
+                }
+            }
+            catch(Exception ex)
+            {
+                observer.Log(ex.Message);
+                return false;
+            }
+
+            return true;
+        }
+
+        private bool IsClosedForRegistration(bool isAdmin)
+        {
+            if (isAdmin)
+                return false;
+
+            return !(DateTime.Now < lastDayToRegister);
+        }
+
+        private void AddAttendee(Person p, bool isAdmin)
+        {
+            if (p is Student)
+            {
+                AddStudent(p, isAdmin);
+
+            }
+            else if (p is Lecturer)
+            {
+                AddLecturer(p, isAdmin);
+            }
+            else
+            {
+                throw new ArgumentException("Person must be of type Student or Lecturer");
+            }
+        }
+
+        private void AddLecturer(Person p, bool isAdmin)
+        {
+            if (ValidateLecturer(p as Lecturer))
+            {
+                lecturers.Add(p as Lecturer);
+            }
+            else
+            {
+                throw new AttendeeNotApplicableForLectureException();
+            }
+        }
+
+        private void AddStudent(Person p, bool isAdmin)
+        {
+            if (ValidateStudentAsAttendee(p as Student))
+            {
+                students.Add(p as Student);
+            }
+            else if (ValidateStudentAsWaitList(p as Student))
+            {
+                studentsWaitList.Add(p as Student);
+            }
+            else
+            {
+                throw new AttendeeNotApplicableForLectureException();
+            }
+        }
+
+        private bool ValidateLecturer(Lecturer p)
+        {
+            return lecturers.Count < this.maxLecturers && (int)p.Level >= (int)this.academicLevelRequiredToTeach;
+        }
+
+        private bool ValidateStudentAsAttendee(Student p)
+        {
+            return students.Count < this.maxStudents && (int)p.Level >= (int)this.academicLevelRequiredToAttend;
+        }
+
+        private bool ValidateStudentAsWaitList(Student p)
+        {
+            return students.Count < this.maxStudentsWaitList && (int)p.Level >= (int)this.academicLevelRequiredToAttend;
+        }
+    }
+}
